@@ -37,8 +37,8 @@ def create_internal_repository(repo_dotcom, github, organization)
     return github.create_repository(
         repo_dotcom.name,
         :organization => organization,
-        :homepage => repo_dotcom.html_url,
         :description => "This repository is automatically synced. Please push changes to #{repo_dotcom.clone_url}",
+        :homepage => 'https://larsxschneider.github.io/2014/08/04/hubsync/',
         :has_issues => false,
         :has_wiki => false,
         :has_downloads => false,
