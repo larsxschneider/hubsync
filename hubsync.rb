@@ -20,14 +20,14 @@ require 'fileutils'
 
 def init_github_clients(dotcom_token, enterprise_token, enterprise_url)
     clients = {}
-    clients[:githubcom] = Octokit::Client.new(:access_token => dotcom_token)
+    clients[:githubcom] = Octokit::Client.new(:access_token => dotcom_token, :auto_paginate => true)
 
     Octokit.configure do |c|
       c.api_endpoint = "#{enterprise_url}/api/v3"
       c.web_endpoint = "#{enterprise_url}"
     end
 
-    clients[:enterprise] = Octokit::Client.new(:access_token => enterprise_token)
+    clients[:enterprise] = Octokit::Client.new(:access_token => enterprise_token, :auto_paginate => true)
     return clients
 end
 
