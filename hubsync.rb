@@ -83,8 +83,8 @@ def sync(clients, dotcom_organization, enterprise_organization, cache_path)
         repo_enterprise = init_enterprise_repository(repo_dotcom, clients[:enterprise], enterprise_organization)
 
         puts "Syncing #{repo_dotcom.name}..."
-        puts "    Source: #{repo_enterprise.clone_url}"
-        puts "    Target: #{repo_dotcom.clone_url}"
+        puts "    Source: #{repo_dotcom.clone_url}"
+        puts "    Target: #{repo_enterprise.clone_url}"
         puts
 
         repo_enterprise.clone_url = repo_enterprise.clone_url.sub(
