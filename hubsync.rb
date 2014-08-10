@@ -125,19 +125,36 @@ def init_local_repository(cache_path, repo_dotcom, repo_enterprise)
     repo_local_dir = "#{cache_path}/#{repo_enterprise.name}"
 
     if File.directory? repo_local_dir
-        repo_local = Git.open(repo_local_dir)
+        repo_local = Git.bare(repo_local_dir)
     else
         puts "Cloning `#{repo_dotcom.name}`..."
 
         repo_local = Git.clone(
-            repo_enterprise.clone_url,
-            repo_enterprise.name,
+            repo_dotcom.clone_url,
+            repo_dotcom.name,
             :path => cache_path,
-            :remote => 'enterprise'
+            :mirror => true
         )
-        repo_local.add_remote('github.com', repo_dotcom.clone_url)
+        repo_local.remote_set_url('origin', repo_enterprise.clone_url, :push => true)
     end
     return repo_local
+end
+
+
+# GitHub automatically creates special read only refs. They need to be removed to perform a successful push.
+# c.f. https://github.com/rtyley/bfg-repo-cleaner/issues/36
+def remove_github_readonly_refs(repo_local)
+    file_lines = ''
+
+    FileUtils.rm_rf(File.join(repo_local.repo.path, 'refs', 'pull'))
+
+    IO.readlines(File.join(repo_local.repo.path, 'packed-refs')).map do |line|
+        file_lines += line unless !(line =~ /^[0-9a-fA-F]{40} refs\/pull\/[0-9]+\/(head|pull|merge)/).nil?
+    end
+
+    File.open(File.join(repo_local.repo.path, 'packed-refs'), 'w') do |file|
+        file.puts file_lines
+    end
 end
 
 
@@ -156,10 +173,10 @@ def sync(clients, dotcom_organization, enterprise_organization, cache_path)
         )
         repo_local = init_local_repository(cache_path, repo_dotcom, repo_enterprise)
 
-        repo_local.remote('github.com').fetch
-        repo_local.checkout("#{repo_dotcom.default_branch}", :force => true)
-        repo_local.reset_hard("github.com/#{repo_dotcom.default_branch}")
-        repo_local.push('enterprise', repo_dotcom.default_branch, :force => true)
+
+        repo_local.remote('origin').fetch
+        remove_github_readonly_refs(repo_local)
+        repo_local.push('origin', repo_dotcom.default_branch, :force => true, :mirror => true)
     end
 end
 
