@@ -18,6 +18,69 @@ require 'git'
 require 'fileutils'
 
 
+module Git
+
+    class Lib
+        def clone(repository, name, opts = {})
+            @path = opts[:path] || '.'
+            clone_dir = opts[:path] ? File.join(@path, name) : name
+
+            arr_opts = []
+            arr_opts << "--bare" if opts[:bare]
+            arr_opts << "--mirror" if opts[:mirror]
+            arr_opts << "--recursive" if opts[:recursive]
+            arr_opts << "-o" << opts[:remote] if opts[:remote]
+            arr_opts << "--depth" << opts[:depth].to_i if opts[:depth] && opts[:depth].to_i > 0
+            arr_opts << "--config" << opts[:config] if opts[:config]
+
+            arr_opts << '--'
+            arr_opts << repository
+            arr_opts << clone_dir
+
+            command('clone', arr_opts)
+
+            opts[:bare] or opts[:mirror] ? {:repository => clone_dir} : {:working_directory => clone_dir}
+        end
+
+        def push(remote, branch = 'master', opts = {})
+            # Small hack to keep backwards compatibility with the 'push(remote, branch, tags)' method signature.
+            opts = {:tags => opts} if [true, false].include?(opts)
+
+            arr_opts = []
+            arr_opts << '--mirror'  if opts[:mirror]
+            arr_opts << '--force'  if opts[:force] || opts[:f]
+            arr_opts << remote
+
+            if opts[:mirror]
+                command('push', arr_opts)
+            else
+                command('push', arr_opts + [branch])
+                command('push', ['--tags'] + arr_opts) if opts[:tags]
+            end
+        end
+
+        def remote_set_url(name, url, opts = {})
+            arr_opts = ['set-url']
+            arr_opts << '--push' if opts[:push]
+            arr_opts << '--'
+            arr_opts << name
+            arr_opts << url
+
+            command('remote', arr_opts)
+        end
+    end
+
+
+    class Base
+        def remote_set_url(name, url, opts = {})
+            url = url.repo.path if url.is_a?(Git::Base)
+            self.lib.remote_set_url(name, url, opts)
+            Git::Remote.new(self, name)
+        end
+     end
+end
+
+
 def init_github_clients(dotcom_token, enterprise_token, enterprise_url)
     clients = {}
     clients[:githubcom] = Octokit::Client.new(:access_token => dotcom_token, :auto_paginate => true)
