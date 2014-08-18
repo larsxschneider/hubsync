@@ -160,23 +160,28 @@ end
 
 def sync(clients, dotcom_organization, enterprise_organization, cache_path)
     clients[:githubcom].repositories(dotcom_organization).each do |repo_dotcom|
-        repo_enterprise = init_enterprise_repository(repo_dotcom, clients[:enterprise], enterprise_organization)
+        begin
+            repo_enterprise = init_enterprise_repository(repo_dotcom, clients[:enterprise], enterprise_organization)
 
-        puts "Syncing #{repo_dotcom.name}..."
-        puts "    Source: #{repo_dotcom.clone_url}"
-        puts "    Target: #{repo_enterprise.clone_url}"
-        puts
+            puts "Syncing #{repo_dotcom.name}..."
+            puts "    Source: #{repo_dotcom.clone_url}"
+            puts "    Target: #{repo_enterprise.clone_url}"
+            puts
 
-        repo_enterprise.clone_url = repo_enterprise.clone_url.sub(
-            'https://',
-            "https://#{clients[:enterprise].access_token}:x-oauth-basic@"
-        )
-        repo_local = init_local_repository(cache_path, repo_dotcom, repo_enterprise)
+            repo_enterprise.clone_url = repo_enterprise.clone_url.sub(
+                'https://',
+                "https://#{clients[:enterprise].access_token}:x-oauth-basic@"
+            )
+            repo_local = init_local_repository(cache_path, repo_dotcom, repo_enterprise)
 
-
-        repo_local.remote('origin').fetch
-        remove_github_readonly_refs(repo_local)
-        repo_local.push('origin', repo_dotcom.default_branch, :force => true, :mirror => true)
+            repo_local.remote('origin').fetch
+            remove_github_readonly_refs(repo_local)
+            repo_local.push('origin', repo_dotcom.default_branch, :force => true, :mirror => true)
+        rescue StandardError => e
+            puts "Syncing #{repo_dotcom.name} FAILED!"
+            puts e.message
+            puts e.backtrace.inspect
+        end
     end
 end
 
@@ -190,5 +195,16 @@ if $0 == __FILE__
     cache_path = ARGV[5]
 
     clients = init_github_clients(dotcom_token, enterprise_token, enterprise_url)
-    sync(clients, dotcom_organization, enterprise_organization, cache_path) while true
+    while true do
+        sleep(1)
+        begin
+            sync(clients, dotcom_organization, enterprise_organization, cache_path)
+        rescue SystemExit, Interrupt
+            raise
+        rescue Exception => e
+            puts "Syncing FAILED!"
+            puts e.message
+            puts e.backtrace.inspect
+        end
+    end
 end
