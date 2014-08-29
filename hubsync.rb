@@ -16,6 +16,7 @@ require 'bundler/setup'
 require 'octokit'
 require 'git'
 require 'fileutils'
+require 'timeout'
 
 
 module Git
@@ -198,7 +199,9 @@ if $0 == __FILE__
     while true do
         sleep(1)
         begin
-            sync(clients, dotcom_organization, enterprise_organization, cache_path)
+            Timeout.timeout(60*10) do
+                sync(clients, dotcom_organization, enterprise_organization, cache_path)
+            end
         rescue SystemExit, Interrupt
             raise
         rescue Exception => e
