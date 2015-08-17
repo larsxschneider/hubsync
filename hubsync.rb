@@ -162,22 +162,25 @@ end
 def sync(clients, dotcom_organization, enterprise_organization, cache_path)
     clients[:githubcom].repositories(dotcom_organization).each do |repo_dotcom|
         begin
-            repo_enterprise = init_enterprise_repository(repo_dotcom, clients[:enterprise], enterprise_organization)
+            # The sync of each repository must not take longer than 15 min
+            Timeout.timeout(60*15) do
+                repo_enterprise = init_enterprise_repository(repo_dotcom, clients[:enterprise], enterprise_organization)
 
-            puts "Syncing #{repo_dotcom.name}..."
-            puts "    Source: #{repo_dotcom.clone_url}"
-            puts "    Target: #{repo_enterprise.clone_url}"
-            puts
+                puts "Syncing #{repo_dotcom.name}..."
+                puts "    Source: #{repo_dotcom.clone_url}"
+                puts "    Target: #{repo_enterprise.clone_url}"
+                puts
 
-            repo_enterprise.clone_url = repo_enterprise.clone_url.sub(
-                'https://',
-                "https://#{clients[:enterprise].access_token}:x-oauth-basic@"
-            )
-            repo_local = init_local_repository(cache_path, repo_dotcom, repo_enterprise)
+                repo_enterprise.clone_url = repo_enterprise.clone_url.sub(
+                    'https://',
+                    "https://#{clients[:enterprise].access_token}:x-oauth-basic@"
+                )
+                repo_local = init_local_repository(cache_path, repo_dotcom, repo_enterprise)
 
-            repo_local.remote('origin').fetch
-            remove_github_readonly_refs(repo_local)
-            repo_local.push('origin', repo_dotcom.default_branch, :force => true, :mirror => true)
+                repo_local.remote('origin').fetch
+                remove_github_readonly_refs(repo_local)
+                repo_local.push('origin', repo_dotcom.default_branch, :force => true, :mirror => true)
+            end
         rescue StandardError => e
             puts "Syncing #{repo_dotcom.name} FAILED!"
             puts e.message
@@ -199,9 +202,7 @@ if $0 == __FILE__
     while true do
         sleep(1)
         begin
-            Timeout.timeout(60*10) do
-                sync(clients, dotcom_organization, enterprise_organization, cache_path)
-            end
+            sync(clients, dotcom_organization, enterprise_organization, cache_path)
         rescue SystemExit, Interrupt
             raise
         rescue Exception => e
