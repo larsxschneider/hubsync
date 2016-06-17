@@ -160,7 +160,7 @@ end
 
 
 def sync(clients, dotcom_organization, enterprise_organization, cache_path)
-    clients[:githubcom].repositories(dotcom_organization).each do |repo_dotcom|
+    clients[:githubcom].organization_repositories(dotcom_organization).each do |repo_dotcom|
         begin
             # The sync of each repository must not take longer than 15 min
             Timeout.timeout(60*15) do
