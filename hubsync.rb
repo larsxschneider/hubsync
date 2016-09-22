@@ -9,7 +9,10 @@
 #              <github enterprise organization> \
 #              <github enterprise token>        \
 #              <repository-cache-path>          \
-#              [<repository-to-sync>] 
+#              [<repository-to-sync>]
+#
+# Note:
+# <repository-to-sync> can be the name of one repository or a collection of repositories separated by ","
 #
 
 require 'rubygems'
@@ -163,7 +166,7 @@ end
 def sync(clients, dotcom_organization, enterprise_organization, repo_name, cache_path)
     clients[:githubcom].organization_repositories(dotcom_organization).each do |repo_dotcom|
         begin
-            if (repo_name.nil? || repo_name == repo_dotcom.name)
+            if (repo_name.nil? || (repo_name.split(",").include? repo_dotcom.name))
                 # The sync of each repository must not take longer than 15 min
                 Timeout.timeout(60*15) do
                     repo_enterprise = init_enterprise_repository(repo_dotcom, clients[:enterprise], enterprise_organization)
