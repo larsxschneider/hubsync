@@ -182,7 +182,7 @@ def sync(clients, dotcom_organization, enterprise_organization, repo_name, cache
                     )
                     repo_local = init_local_repository(cache_path, repo_dotcom, repo_enterprise)
 
-                    repo_local.remote('origin').fetch
+                    repo_local.remote('origin').fetch(:tags => true, :prune => true)
                     remove_github_readonly_refs(repo_local)
                     repo_local.push('origin', repo_dotcom.default_branch, :force => true, :mirror => true)
                 end
